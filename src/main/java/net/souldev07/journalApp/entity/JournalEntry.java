@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.souldev07.journalApp.enums.Sentiment;
 
 // POJO - Plain Old Java Object
 @Document(collection = "journal_entries")
@@ -19,4 +20,5 @@ public class JournalEntry {
     private String title;
     private String content;
     private LocalDateTime date;
+    private Sentiment sentiment;
 }
