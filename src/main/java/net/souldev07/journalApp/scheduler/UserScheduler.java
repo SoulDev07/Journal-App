@@ -8,26 +8,23 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import net.souldev07.journalApp.entity.JournalEntry;
 import net.souldev07.journalApp.entity.User;
 import net.souldev07.journalApp.enums.Sentiment;
+import net.souldev07.journalApp.model.SentimentData;
 import net.souldev07.journalApp.repository.UserRepositoryImpl;
-import net.souldev07.journalApp.service.EmailService;
-import net.souldev07.journalApp.service.SentimentAnalysisService;
 
 @Component
 public class UserScheduler {
 
     @Autowired
-    private EmailService emailService;
-
-    @Autowired
     private UserRepositoryImpl userRepository;
 
     @Autowired
-    private SentimentAnalysisService sentimentAnalysisService;
+    private KafkaTemplate<String, SentimentData> kafkaTemplate;
 
     public void fetchUsersAndSendSentimentAnalysisMail() {
         List<User> users = userRepository.getUsersWithSentimentAnalysisEnabled();
@@ -53,8 +50,11 @@ public class UserScheduler {
             }
 
             if (mostFrequentSentiment != null) {
-                emailService.sendEmail(user.getEmail(), "Sentiment Analysis for past 7 days",
-                        mostFrequentSentiment.toString());
+                SentimentData sentimentData = SentimentData.builder()
+                        .email(user.getEmail())
+                        .sentiment(mostFrequentSentiment.toString())
+                        .build();
+                kafkaTemplate.send("weekly-sentiments", sentimentData.getEmail(), sentimentData);
             }
         }
     }
