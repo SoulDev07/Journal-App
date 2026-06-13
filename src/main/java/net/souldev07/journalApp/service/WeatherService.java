@@ -14,7 +14,7 @@ import net.souldev07.journalApp.constants.Placeholders;
 @Service
 public class WeatherService {
 
-    @Value("${apikey.weather}")
+    @Value("${weather.api.key}")
     private String apiKey;
 
     @Autowired
@@ -27,22 +27,24 @@ public class WeatherService {
     RedisService redisService;
 
     public WeatherResponse getWeather(String city) {
-        String weatherApiUrl = appCache.appCache.get(AppCache.keys.WEATHER_API.toString())
+        WeatherResponse weatherResponse = redisService.get("weather:" + city, WeatherResponse.class);
+        if (weatherResponse != null)
+            return weatherResponse;
+
+        String weatherApiUrl = appCache.appCache.get(AppCache.keys.WEATHER_API.toString());
+        if (weatherApiUrl == null || weatherApiUrl.isEmpty() || apiKey == null || apiKey.isEmpty())
+            return null;
+
+        weatherApiUrl = weatherApiUrl
                 .replace(Placeholders.CITY, city)
                 .replace(Placeholders.API_KEY, apiKey);
-
-        WeatherResponse weatherResponse = redisService.get("weather:" + city, WeatherResponse.class);
-        if (weatherResponse != null) {
-            return weatherResponse;
-        }
 
         ResponseEntity<WeatherResponse> response = restTemplate.exchange(weatherApiUrl, HttpMethod.GET, null,
                 WeatherResponse.class);
         weatherResponse = response.getBody();
 
-        if (weatherResponse != null) {
+        if (weatherResponse != null)
             redisService.set("weather:" + city, weatherResponse, 300L);
-        }
 
         return weatherResponse;
     }

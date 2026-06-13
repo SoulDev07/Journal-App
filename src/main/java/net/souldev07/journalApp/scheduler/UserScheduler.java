@@ -9,13 +9,19 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureCallback;
 
+import net.souldev07.journalApp.cache.AppCache;
 import net.souldev07.journalApp.entity.JournalEntry;
 import net.souldev07.journalApp.entity.User;
 import net.souldev07.journalApp.enums.Sentiment;
 import net.souldev07.journalApp.model.SentimentData;
 import net.souldev07.journalApp.repository.UserRepositoryImpl;
+import net.souldev07.journalApp.service.EmailService;
 
 @Component
 public class UserScheduler {
@@ -26,6 +32,13 @@ public class UserScheduler {
     @Autowired
     private KafkaTemplate<String, SentimentData> kafkaTemplate;
 
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private AppCache appCache;
+
+    @Scheduled(cron = "0 0 9 * * SUN")
     public void fetchUsersAndSendSentimentAnalysisMail() {
         List<User> users = userRepository.getUsersWithSentimentAnalysisEnabled();
         for (User user : users) {
@@ -52,10 +65,34 @@ public class UserScheduler {
             if (mostFrequentSentiment != null) {
                 SentimentData sentimentData = SentimentData.builder()
                         .email(user.getEmail())
-                        .sentiment(mostFrequentSentiment.toString())
+                        .sentiment("Sentiment for last 7 days: " + mostFrequentSentiment)
                         .build();
-                kafkaTemplate.send("weekly-sentiments", sentimentData.getEmail(), sentimentData);
+                try {
+                    ListenableFuture<SendResult<String, SentimentData>> sendFuture = kafkaTemplate
+                            .send("weekly-sentiments", sentimentData.getEmail(), sentimentData);
+                    sendFuture.addCallback(new ListenableFutureCallback<SendResult<String, SentimentData>>() {
+                        @Override
+                        public void onFailure(Throwable ex) {
+                            sendSentimentEmail(sentimentData);
+                        }
+
+                        @Override
+                        public void onSuccess(SendResult<String, SentimentData> result) {
+                        }
+                    });
+                } catch (Exception e) {
+                    sendSentimentEmail(sentimentData);
+                }
             }
         }
+    }
+
+    @Scheduled(cron = "0 0/10 * ? * *")
+    public void clearAppCache() {
+        appCache.init();
+    }
+
+    private void sendSentimentEmail(SentimentData sentimentData) {
+        emailService.sendEmail(sentimentData.getEmail(), "Sentiment for previous week", sentimentData.getSentiment());
     }
 }

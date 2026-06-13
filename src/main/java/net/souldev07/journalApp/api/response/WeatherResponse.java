@@ -12,7 +12,7 @@ public class WeatherResponse {
 
     @Getter
     @Setter
-    public class Main {
+    public static class Main {
         public double temp;
 
         @JsonProperty("feels_like")
