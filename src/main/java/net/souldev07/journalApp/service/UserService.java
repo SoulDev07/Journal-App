@@ -10,10 +10,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
 import net.souldev07.journalApp.entity.User;
 import net.souldev07.journalApp.repository.UserRepository;
 
 @Service
+@Slf4j
 public class UserService {
 
     @Autowired
@@ -21,10 +23,16 @@ public class UserService {
 
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public void saveNewUser(User user) {
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRoles(Arrays.asList("USER"));
-        userRepository.save(user);
+    public boolean saveNewUser(User user) {
+        try {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            user.setRoles(Arrays.asList("USER"));
+            userRepository.save(user);
+            return true;
+        } catch (Exception e) {
+            log.error("Error saving user: ", e);
+            return false;
+        }
     }
 
     public void saveUser(User user) {
@@ -45,12 +53,15 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-    public void deleteByUsername(String username) {
-        userRepository.deleteByUsername(username);
+    public void deleteById(ObjectId id) {
+        userRepository.deleteById(id);
     }
 
     public User findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 
+    public void deleteByUsername(String username) {
+        userRepository.deleteByUsername(username);
+    }
 }

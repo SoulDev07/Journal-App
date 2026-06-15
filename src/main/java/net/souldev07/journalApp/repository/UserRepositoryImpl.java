@@ -16,13 +16,12 @@ public class UserRepositoryImpl {
     @Autowired
     private MongoTemplate mongoTemplate;
 
-    public List<User> getUsersWithSentimentAnalysisEnabled() {
+    public List<User> getUserForSA() {
         Query query = new Query();
         // query.addCriteria(Criteria.where("email").exists(true).ne(null).ne(""));
-        query.addCriteria(Criteria.where("email").regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"));
-        query.addCriteria(Criteria.where("sentimentAnalysisEnabled").is(true));
-
-        List<User> users = mongoTemplate.find(query, User.class);
-        return users;
+        query.addCriteria(Criteria.where("email")
+                .regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,6}$"));
+        query.addCriteria(Criteria.where("sentimentAnalysis").is(true));
+        return mongoTemplate.find(query, User.class);
     }
 }

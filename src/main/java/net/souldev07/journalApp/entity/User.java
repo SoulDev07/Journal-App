@@ -32,8 +32,8 @@ public class User {
 
     private String email;
 
+    private boolean sentimentAnalysis = false;
+
     @DBRef
     private List<JournalEntry> journalEntries = new ArrayList<>();
-
-    private boolean sentimentAnalysisEnabled = false;
 }

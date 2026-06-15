@@ -9,11 +9,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.util.concurrent.ListenableFuture;
-import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import net.souldev07.journalApp.cache.AppCache;
 import net.souldev07.journalApp.entity.JournalEntry;
@@ -27,61 +24,49 @@ import net.souldev07.journalApp.service.EmailService;
 public class UserScheduler {
 
     @Autowired
-    private UserRepositoryImpl userRepository;
-
-    @Autowired
-    private KafkaTemplate<String, SentimentData> kafkaTemplate;
-
-    @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private UserRepositoryImpl userRepository;
 
     @Autowired
     private AppCache appCache;
 
-    @Scheduled(cron = "0 0 9 * * SUN")
-    public void fetchUsersAndSendSentimentAnalysisMail() {
-        List<User> users = userRepository.getUsersWithSentimentAnalysisEnabled();
-        for (User user : users) {
-            List<JournalEntry> journalEntries = user.getJournalEntries();
-            List<Sentiment> sentiments = journalEntries.stream()
-                    .filter(x -> x.getDate().isAfter(LocalDateTime.now().minus(7, ChronoUnit.DAYS)))
-                    .map(x -> x.getSentiment()).collect(Collectors.toList());
+    @Autowired
+    private KafkaTemplate<String, SentimentData> kafkaTemplate;
 
-            Map<Sentiment, Integer> sentimentCounts = new HashMap<>();
-            for (Sentiment sentiment : sentiments) {
-                if (sentiment != null)
-                    sentimentCounts.put(sentiment, sentimentCounts.getOrDefault(sentiment, 0) + 1);
+    @Scheduled(cron = "0 0 9 * * SUN")
+    public void fetchUsersAndSendSaMail() {
+        List<User> users = userRepository.getUserForSA();
+        for (User user : users) {
+            List<Sentiment> sentiments = user.getJournalEntries().stream()
+                    .filter(x -> x.getDate().isAfter(LocalDateTime.now().minus(7, ChronoUnit.DAYS)))
+                    .map(JournalEntry::getSentiment)
+                    .collect(Collectors.toList());
+
+            Map<Sentiment, Integer> counts = new HashMap<>();
+            for (Sentiment s : sentiments) {
+                if (s != null) counts.put(s, counts.getOrDefault(s, 0) + 1);
             }
 
-            Sentiment mostFrequentSentiment = null;
-            int maxCount = 0;
-            for (Map.Entry<Sentiment, Integer> entry : sentimentCounts.entrySet()) {
-                if (entry.getValue() > maxCount) {
-                    maxCount = entry.getValue();
-                    mostFrequentSentiment = entry.getKey();
+            Sentiment top = null;
+            int max = 0;
+            for (Map.Entry<Sentiment, Integer> e : counts.entrySet()) {
+                if (e.getValue() > max) {
+                    max = e.getValue();
+                    top = e.getKey();
                 }
             }
 
-            if (mostFrequentSentiment != null) {
-                SentimentData sentimentData = SentimentData.builder()
+            if (top != null) {
+                SentimentData data = SentimentData.builder()
                         .email(user.getEmail())
-                        .sentiment("Sentiment for last 7 days: " + mostFrequentSentiment)
+                        .sentiment("Sentiment for last 7 days: " + top)
                         .build();
                 try {
-                    ListenableFuture<SendResult<String, SentimentData>> sendFuture = kafkaTemplate
-                            .send("weekly-sentiments", sentimentData.getEmail(), sentimentData);
-                    sendFuture.addCallback(new ListenableFutureCallback<SendResult<String, SentimentData>>() {
-                        @Override
-                        public void onFailure(Throwable ex) {
-                            sendSentimentEmail(sentimentData);
-                        }
-
-                        @Override
-                        public void onSuccess(SendResult<String, SentimentData> result) {
-                        }
-                    });
+                    kafkaTemplate.send("weekly-sentiments", data.getEmail(), data);
                 } catch (Exception e) {
-                    sendSentimentEmail(sentimentData);
+                    emailService.sendEmail(data.getEmail(), "Sentiment", data.getSentiment());
                 }
             }
         }
@@ -90,9 +75,5 @@ public class UserScheduler {
     @Scheduled(cron = "0 0/10 * ? * *")
     public void clearAppCache() {
         appCache.init();
-    }
-
-    private void sendSentimentEmail(SentimentData sentimentData) {
-        emailService.sendEmail(sentimentData.getEmail(), "Sentiment for previous week", sentimentData.getSentiment());
     }
 }
