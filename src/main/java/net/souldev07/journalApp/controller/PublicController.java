@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import net.souldev07.journalApp.entity.User;
+import net.souldev07.journalApp.service.UserDetailsServiceImpl;
 import net.souldev07.journalApp.service.UserService;
 import net.souldev07.journalApp.utils.JwtUtil;
 
@@ -26,12 +27,18 @@ public class PublicController {
     private AuthenticationManager authenticationManager;
 
     @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
+    @Autowired
     private JwtUtil jwtUtil;
 
-    @PostMapping("/create-user")
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        userService.saveNewUser(user);
-        return new ResponseEntity<>(HttpStatus.CREATED);
+    @PostMapping("/signup")
+    public ResponseEntity<?> signup(@RequestBody User user) {
+        boolean saved = userService.saveNewUser(user);
+        if (saved)
+            return new ResponseEntity<>(HttpStatus.CREATED);
+
+        return new ResponseEntity<>("User already exists or invalid data", HttpStatus.BAD_REQUEST);
     }
 
     @PostMapping("/login")

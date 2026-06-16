@@ -24,5 +24,4 @@ public class WeatherResponse {
         @JsonProperty("temp_max")
         public double tempMax;
     }
-
 }

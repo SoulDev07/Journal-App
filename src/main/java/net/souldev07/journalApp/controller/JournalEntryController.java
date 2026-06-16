@@ -35,16 +35,16 @@ public class JournalEntryController {
     private UserService userService;
 
     @GetMapping
-    public ResponseEntity<List<JournalEntry>> getAllJournalEntriesOfUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
+    public ResponseEntity<?> getAllJournalEntriesOfUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
         User user = userService.findByUsername(username);
-
-        if (user.getJournalEntries().isEmpty()) {
+        List<JournalEntry> all = user.getJournalEntries();
+        if (all.isEmpty())
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
 
-        return new ResponseEntity<>(user.getJournalEntries(), HttpStatus.OK);
+        return new ResponseEntity<>(all, HttpStatus.OK);
     }
 
     @PostMapping
@@ -83,11 +83,10 @@ public class JournalEntryController {
         String username = authentication.getName();
 
         boolean removed = journalEntryService.deleteById(journalId, username);
-        if (removed) {
+        if (removed)
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @PutMapping("/id/{journalId}")
@@ -101,9 +100,8 @@ public class JournalEntryController {
         List<JournalEntry> journalEntries = user.getJournalEntries().stream()
                 .filter(entry -> entry.getId().equals(journalId)).collect(Collectors.toList());
 
-        if (journalEntries.isEmpty()) {
+        if (journalEntries.isEmpty())
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
 
         JournalEntry old = journalEntries.get(0);
 
