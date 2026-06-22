@@ -1,8 +1,11 @@
 package net.souldev07.journalApp.enums;
 
 public enum Sentiment {
-    HAPPY,
+    JOYFUL,
     SAD,
     ANGRY,
-    ANXIOUS;
+    ANXIOUS,
+    DISGUSTED,
+    SURPRISED,
+    NEUTRAL;
 }
