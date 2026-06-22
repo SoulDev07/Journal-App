@@ -1,0 +1,12 @@
+[project]
+name = "sentiment-service"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.116.1",
+    "py-eureka-client==0.11.10",
+    "pydantic==2.11.7",
+    "torch==2.11.0",
+    "transformers==4.53.0",
+    "uvicorn[standard]==0.35.0",
+]
