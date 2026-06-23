@@ -23,6 +23,8 @@
         <module>api-gateway</module>
         <module>auth-service</module>
         <module>journal-service</module>
+        <module>notification-service</module>
+        <module>audit-service</module>
     </modules>
 
     <properties>

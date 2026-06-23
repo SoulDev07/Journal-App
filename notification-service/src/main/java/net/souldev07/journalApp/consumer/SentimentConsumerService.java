@@ -1,12 +1,15 @@
-package net.souldev07.journalApp.service;
+package net.souldev07.journalApp.consumer;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
 import net.souldev07.journalApp.model.SentimentData;
+import net.souldev07.journalApp.service.EmailService;
 
 @Service
+@Slf4j
 public class SentimentConsumerService {
 
     @Autowired
@@ -14,10 +17,10 @@ public class SentimentConsumerService {
 
     @KafkaListener(topics = "weekly-sentiments", groupId = "weekly-sentiment-group")
     public void consume(SentimentData sentimentData) {
-        sendEmail(sentimentData);
-    }
-
-    private void sendEmail(SentimentData sentimentData) {
-        emailService.sendEmail(sentimentData.getEmail(), "Sentiment for previous week", sentimentData.getSentiment());
+        log.info("Received SentimentData for weekly summary aggregation email: {}", sentimentData.getEmail());
+        emailService.sendEmail(
+                sentimentData.getEmail(),
+                "Your Weekly Journal Sentiment Summary",
+                sentimentData.getSentiment());
     }
 }
