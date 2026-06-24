@@ -53,6 +53,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Apache Kafka Starter -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
         <!-- Service Discovery / Eureka Client -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
